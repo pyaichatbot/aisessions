@@ -13,7 +13,7 @@ cat > .env << EOF
 # Neo4j Configuration
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=enterprise123
+NEO4J_PASSWORD=
 NEO4J_DB=neo4j
 
 # Application Configuration
@@ -37,7 +37,7 @@ docker-compose up -d
 
 # Wait for Neo4j to be ready
 echo "⏳ Waiting for Neo4j to be ready..."
-until docker-compose exec neo4j cypher-shell -u neo4j -p enterprise123 "RETURN 1" > /dev/null 2>&1; do
+until docker-compose exec neo4j cypher-shell -u neo4j -p  "RETURN 1" > /dev/null 2>&1; do
     echo "Still waiting for Neo4j..."
     sleep 10
 done
@@ -51,7 +51,7 @@ docker-compose exec diagram_extractor pip install jupyterlab flask flask-cors gu
 echo "🎉 Deployment completed successfully!"
 echo ""
 echo "🔗 Service URLs:"
-echo "   Neo4j Browser: http://localhost:7474 (neo4j/enterprise123)"
+echo "   Neo4j Browser: http://localhost:7474 (neo4j/)"
 echo "   Jupyter Lab:   http://localhost:8888"
 echo "   API Service:   http://localhost:8000"
 echo ""
@@ -100,7 +100,7 @@ echo "   docker cp \$(docker-compose ps -q diagram_extractor):/app/output/. ./lo
 echo ""
 echo "7️⃣  View Neo4j data:"
 echo "   Open http://localhost:7474 in browser"
-echo "   Username: neo4j, Password: enterprise123"
+echo "   Username: neo4j, Password: "
 echo "   Query: MATCH (n) RETURN n LIMIT 25"
 
 echo ""
@@ -241,7 +241,7 @@ cat > notebooks/architecture_analysis.ipynb << 'EOF'
     "import seaborn as sns\n",
     "\n",
     "# Neo4j connection\n",
-    "driver = GraphDatabase.driver('bolt://neo4j:7687', auth=('neo4j', 'enterprise123'))"
+    "driver = GraphDatabase.driver('bolt://neo4j:7687', auth=('neo4j', ''))"
    ]
   },
   {
