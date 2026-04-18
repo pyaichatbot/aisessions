@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multiagent"
+version = "0.1.0"
+description = "Multi-agent dev team with harness"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.39",
+    "pyyaml>=6",
+    "gitpython>=3.1",
+    "tenacity>=8",
+    "rich>=13",
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6"]
+
+[project.scripts]
+multiagent = "multiagent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["multiagent*"]
