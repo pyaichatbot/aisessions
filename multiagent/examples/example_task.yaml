@@ -1,0 +1,5 @@
+task: |
+  Add retry with exponential backoff to the HTTP fetcher in src/fetcher.py.
+  Keep the public signature of fetch(url: str) -> Response.
+branch: agent/dev-retry-fetcher
+base: main

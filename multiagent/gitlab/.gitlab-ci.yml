@@ -1,0 +1,48 @@
+# GitLab CI entrypoints for the multi-agent team.
+# Include in root .gitlab-ci.yml:
+#   include:
+#     - local: multiagent/gitlab/.gitlab-ci.yml
+
+stages: [agent]
+
+variables:
+  ANTHROPIC_API_KEY: "$ANTHROPIC_API_KEY"
+  MULTIAGENT_DEBUG_JOBS: "$MULTIAGENT_DEBUG_JOBS"  # comma list, empty = all
+
+.agent_base:
+  image: python:3.11-slim
+  stage: agent
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git curl >/dev/null
+    - pip install --no-cache-dir -e ./multiagent
+  tags: [docker]
+
+# Dev workflow: triggered by issue label `agent/dev` via webhook pipeline
+# Issue description becomes the task.
+agent_dev:
+  extends: .agent_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $AGENT_MODE == "dev"'
+  script:
+    - BRANCH="agent/dev-${CI_COMMIT_SHORT_SHA:-$RANDOM}"
+    - git checkout -b "$BRANCH"
+    - python -m multiagent.cli dev
+        --task "$AGENT_TASK"
+        --branch "$BRANCH"
+        --base "${CI_DEFAULT_BRANCH:-main}"
+
+# Debugger workflow: runs when a previous MR job failed.
+# Configure your failing pipelines to trigger this with AGENT_MODE=debug.
+agent_debug:
+  extends: .agent_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $AGENT_MODE == "debug"'
+  script:
+    - test -n "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" || { echo "no MR context"; exit 1; }
+    - git fetch origin "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+    - git checkout "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+    - python -m multiagent.cli debug
+        --branch "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+        --base "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+        --failed-job "$FAILED_JOB_NAME"
+        --logs-file "$FAILED_JOB_LOGS_FILE"
