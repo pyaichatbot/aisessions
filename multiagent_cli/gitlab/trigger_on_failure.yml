@@ -1,0 +1,31 @@
+# Attach to real pipeline jobs to auto-trigger debug on failure.
+# Example:
+#   test:
+#     script: pytest
+#     extends: .emit_debug_trigger_on_fail
+#
+# Requires CI vars: DEBUG_TRIGGER_TOKEN, CI_PROJECT_ID.
+
+.emit_debug_trigger_on_fail:
+  after_script:
+    - |
+      if [ "$CI_JOB_STATUS" = "failed" ]; then
+        if [ -n "$MULTIAGENT_DEBUG_JOBS" ]; then
+          case ",$MULTIAGENT_DEBUG_JOBS," in
+            *",$CI_JOB_NAME,"*) : ;;
+            *) echo "job not enabled for auto-debug"; exit 0 ;;
+          esac
+        fi
+        LOGS_FILE="debug_logs_${CI_JOB_ID}.txt"
+        cp "$CI_PROJECT_DIR/job.log" "$LOGS_FILE" 2>/dev/null || \
+          echo "no job.log capture" > "$LOGS_FILE"
+        curl -sS --fail -X POST \
+          -F "token=$DEBUG_TRIGGER_TOKEN" \
+          -F "ref=$CI_COMMIT_REF_NAME" \
+          -F "variables[AGENT_MODE]=debug" \
+          -F "variables[FAILED_JOB_NAME]=$CI_JOB_NAME" \
+          -F "variables[FAILED_JOB_LOGS_FILE]=$LOGS_FILE" \
+          -F "variables[CI_MERGE_REQUEST_SOURCE_BRANCH_NAME]=$CI_COMMIT_REF_NAME" \
+          -F "variables[CI_MERGE_REQUEST_TARGET_BRANCH_NAME]=$CI_DEFAULT_BRANCH" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/trigger/pipeline"
+      fi

@@ -1,0 +1,33 @@
+harness:
+  max_parallel_coders: 3
+  max_iterations: 4
+  cost_budget_usd: 5.00
+  coverage_threshold: 80
+  test_timeout_sec: 600
+  enable_prompt_cache: true
+
+router:
+  cheap: claude-haiku-4-5-20251001
+  mid: claude-sonnet-4-6
+  strong: claude-opus-4-7
+  escalation_rule: on_review_fail_twice
+
+memory:
+  wiki_root: .multiagent_md/wiki
+  page_bytes_max: 8192
+  version_strategy: append_only_jsonl
+  merge_strategy: union_crdt
+  topk_retrieval: 6
+
+workflows:
+  dev:
+    require_coverage: true
+    single_mr: true
+  debug:
+    trigger_jobs: ["test", "lint", "build"]
+    single_mr: true
+
+gitlab:
+  default_branch: main
+  mr_label_dev: "agent/dev"
+  mr_label_debug: "agent/debug"

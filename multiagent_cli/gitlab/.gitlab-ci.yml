@@ -1,0 +1,43 @@
+# Include from root .gitlab-ci.yml:
+#   include:
+#     - local: multiagent_cli/gitlab/.gitlab-ci.yml
+#
+# Requires CI variables:
+#   ANTHROPIC_API_KEY        — Claude auth
+#   GITLAB_TOKEN             — for MR API (or rely on CI_JOB_TOKEN)
+#   MULTIAGENT_DEBUG_JOBS    — comma list of job names eligible for auto-debug
+
+stages: [agent]
+
+.agent_base:
+  image: node:20-bookworm
+  stage: agent
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git curl jq python3 >/dev/null
+    - npm install -g @anthropic-ai/claude-code
+    - cp -r multiagent_cli/.claude .claude
+  tags: [docker]
+
+agent_dev:
+  extends: .agent_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $AGENT_MODE == "dev"'
+  variables:
+    AGENT_BRANCH: "agent/dev-${CI_COMMIT_SHORT_SHA}"
+    AGENT_BASE: "${CI_DEFAULT_BRANCH}"
+  script:
+    - git checkout -b "$AGENT_BRANCH"
+    - claude -p "/dev $AGENT_TASK" --dangerously-skip-permissions --output-format stream-json
+
+agent_debug:
+  extends: .agent_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $AGENT_MODE == "debug"'
+  variables:
+    AGENT_BRANCH: "${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME}"
+    AGENT_BASE: "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
+  script:
+    - test -n "$AGENT_BRANCH" || { echo "no MR context"; exit 1; }
+    - git fetch origin "$AGENT_BRANCH"
+    - git checkout "$AGENT_BRANCH"
+    - claude -p "/debug $FAILED_JOB_LOGS_FILE" --dangerously-skip-permissions --output-format stream-json

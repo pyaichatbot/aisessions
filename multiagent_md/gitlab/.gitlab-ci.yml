@@ -1,0 +1,43 @@
+# Include from root .gitlab-ci.yml:
+#   include:
+#     - local: multiagent_md/gitlab/.gitlab-ci.yml
+
+stages: [agent]
+
+variables:
+  ANTHROPIC_API_KEY: "$ANTHROPIC_API_KEY"
+  MULTIAGENT_DEBUG_JOBS: "$MULTIAGENT_DEBUG_JOBS"
+
+.agent_base:
+  image: python:3.11-slim
+  stage: agent
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git curl >/dev/null
+    - pip install --no-cache-dir -e ./multiagent_md
+  tags: [docker]
+
+agent_dev:
+  extends: .agent_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $AGENT_MODE == "dev"'
+  script:
+    - BRANCH="agent/dev-${CI_COMMIT_SHORT_SHA:-$RANDOM}"
+    - git checkout -b "$BRANCH"
+    - python -m multiagent_md.cli dev
+        --task "$AGENT_TASK"
+        --branch "$BRANCH"
+        --base "${CI_DEFAULT_BRANCH:-main}"
+
+agent_debug:
+  extends: .agent_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $AGENT_MODE == "debug"'
+  script:
+    - test -n "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" || { echo "no MR context"; exit 1; }
+    - git fetch origin "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+    - git checkout "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+    - python -m multiagent_md.cli debug
+        --branch "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+        --base "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+        --failed-job "$FAILED_JOB_NAME"
+        --logs-file "$FAILED_JOB_LOGS_FILE"
