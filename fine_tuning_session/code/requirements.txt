@@ -1,0 +1,23 @@
+# Pin to known-good versions. Adjust as upstream releases.
+# Tested target: CUDA 12.1, Python 3.10–3.11.
+
+torch>=2.3,<2.6
+transformers>=4.44,<5.0
+accelerate>=0.33
+peft>=0.12
+trl>=0.10
+datasets>=2.20
+bitsandbytes>=0.43            # NF4, paged optimizers (Linux/CUDA)
+sentencepiece>=0.2.0
+protobuf>=4.25
+
+# Eval / judge
+anthropic>=0.39               # Claude judge
+openai>=1.50                  # optional: GPT judge
+scikit-learn>=1.4             # F1 / metrics
+numpy>=1.26
+tqdm>=4.66
+
+# Serving (install separately on the serving box)
+# vllm>=0.6.0
+# autoawq>=0.2.6
